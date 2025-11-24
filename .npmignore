@@ -1,0 +1,32 @@
+# Source files (already in package)
+# Keep src/ for npm package
+
+# Development files
+.github/
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Documentation (keep README and CHANGELOG)
+CONTRIBUTING.md
+.github/
+
+# Environment
+.env
+.env.*
+.env.local
+
+# Testing
+coverage/
+.nyc_output/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+

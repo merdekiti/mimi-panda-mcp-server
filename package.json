@@ -1,0 +1,47 @@
+{
+  "name": "mimi-panda-mcp-server",
+  "version": "1.0.0",
+  "description": "Model Context Protocol (MCP) server for interacting with the Mimi Panda API",
+  "type": "module",
+  "main": "src/mcp-server.mjs",
+  "bin": {
+    "mimi-panda-mcp": "./src/mcp-server.mjs"
+  },
+  "scripts": {
+    "start": "node src/mcp-server.mjs"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "mimi-panda",
+    "api",
+    "coloring",
+    "paint-by-numbers",
+    "ai-image-generation"
+  ],
+  "author": "Mimi Panda",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mimipanda/mcp-server.git"
+  },
+  "bugs": {
+    "url": "https://github.com/mimipanda/mcp-server/issues"
+  },
+  "homepage": "https://github.com/mimipanda/mcp-server#readme",
+  "engines": {
+    "node": ">=18"
+  },
+  "files": [
+    "src/",
+    "LICENSE",
+    "README.md",
+    "CHANGELOG.md"
+  ],
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "dotenv": "^16.4.5",
+    "zod": "^3.23.8"
+  }
+}
+
