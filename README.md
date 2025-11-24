@@ -175,10 +175,13 @@ mcp-server/
 ├── .github/                    # GitHub templates and workflows
 ├── .gitignore
 ├── .npmignore
+├── .env.example                # Sample environment configuration
 ├── CHANGELOG.md
 ├── CONTRIBUTING.md
 ├── LICENSE
+├── PRODUCTION_CHECKLIST.md
 ├── package.json
+├── package-lock.json
 └── README.md
 ```
 
