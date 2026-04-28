@@ -30,7 +30,7 @@ const CONFIG = {
 const SENSITIVE_HEADERS = new Set(['authorization', 'x-api-key']);
 
 const COLORING_V2_TYPES = ['v2_general', 'v2_detailed', 'v2_anime', 'v2_simplified', 'v2_comic'];
-const COLORING_V1_TYPES = ['for_adults', 'for_kids', 'simple', 'image', 'photo', 'sketching'];
+const COLORING_V1_TYPES = ['image', 'photo'];
 const PBN_SEGMENT_COMPLEXITIES = ['none', 'level1', 'level2', 'level3', 'simplest'];
 const PBN_GRADIENT_STEPS = ['high', 'normal'];
 const PBN_COLOR_PRECISIONS = ['high', 'normal', 'low', 'lowest'];
@@ -60,7 +60,7 @@ const AI_FILTER_TYPES = [
 ];
 const AI_FILTER_TYPES_FULL = Array.from(new Set([...aiFilterTypesFromJson]));
 const AI_COLORING_ASPECT_RATIOS = ['1x1', '2x3', '3x2', '4x3', '3x4', '9x16', '16x9'];
-const AI_COLORING_STYLES = ['simple_coloring_page', 'detailed_coloring_page', 'realistic_coloring_page'];
+const AI_COLORING_STYLES = ['kids_coloring_page', 'teenagers_coloring_page', 'adults_coloring_page'];
 const AI_COLORING_VERSIONS = ['v1', 'v2'];
 const AI_IMAGE_ASPECT_RATIOS = ['1x1', '2x3', '3x2', '4x5', '5x4'];
 const AI_FILTER_STRENGTH_VALUES = [0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
@@ -281,7 +281,7 @@ const API_ROUTES = [
         .enum(COLORING_TYPE_OPTIONS)
         .optional()
         .describe(
-          'Optional coloring style. Defaults to v2_general for version=v2, for_adults for version=v1.'
+          'Optional coloring style. Defaults to v2_general for version=v2, photo for version=v1.'
         ),
       version: z.enum(['v1', 'v2']).optional().describe('Processing pipeline version. Defaults to v2.')
     }),
@@ -345,7 +345,8 @@ const API_ROUTES = [
           .optional()
           .describe('The minimum size (as a percentage of the shortest side of your image) that a color region must be to remain separate. Increasing this value will combine smaller color regions into larger ones. Default is Auto - automatically detect the minimum size. 0% means no merging.'),
         mode: z.enum(PBN_MODES).optional().describe('Segmentation output mode. Defaults to polygon.'),
-        enhancement: z.boolean().optional().describe('Enable smart enhancement technique to remove unnecessary details and improve the overall quality of the image (default true).')
+        enhancement: z.boolean().optional().describe('Enable smart enhancement technique to remove unnecessary details and improve the overall quality of the image (default true).'),
+        shapeSmoothing: z.boolean().optional().describe('Smooth out the edges of the PBN shapes, resulting in a more seamless appearance but less details (default true).')
       })
       .refine((data) => data.image || data.prompt, {
         message: 'Provide either image or prompt.'
@@ -361,7 +362,7 @@ const API_ROUTES = [
     inputSchema: z.object({
       prompt: z.string().min(3).max(600).describe('Text prompt for generation.'),
       style: z.enum(AI_COLORING_STYLES).describe('Preset style slug supplied by provider.'),
-      aspectRatio: z.enum(AI_COLORING_ASPECT_RATIOS).describe('Canvas aspect ratio.'),
+      aspectRatio: z.enum(AI_COLORING_ASPECT_RATIOS).optional().describe('Canvas aspect ratio.'),
       version: z.enum(AI_COLORING_VERSIONS).describe('Provider version to use.')
     }),
     outputSchema: TASK_CREATION_OUTPUT_SCHEMA
