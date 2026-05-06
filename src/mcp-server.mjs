@@ -460,7 +460,7 @@ const API_ROUTES = [
     description: 'Download a ready PBN item as a file. Substitute {uuid} and {type} directly in the path when calling call_api. Returns a binary file download (SVG, PNG, or PDF). Use query params for optional width/height and custom-type overrides.',
     authRequired: true,
     group: 'service',
-    notes: 'Returns 409 if the item status is not "ready". Returns 404 if the UUID does not point to a PBN item. The response body is binary; rawText will contain the file bytes. Save using the extension that matches the chosen type. For type=custom all download-* query params are required.',
+    notes: 'Returns 409 if the item status is not "ready". Returns 404 if the UUID does not point to a PBN item. The response body is binary; isBinary=true and rawText holds the base64-encoded file bytes. Save with: echo "$rawText" | base64 -d > file.ext (use the extension matching the chosen type). For type=custom all download-* query params are required.',
     inputSchema: z.object({
       uuid: z.string().uuid().describe('PBN item key returned by POST /service/pbn.'),
       type: z.enum(PBN_IMAGE_DOWNLOAD_TYPES).describe(
@@ -484,7 +484,7 @@ const API_ROUTES = [
     description: 'Download the color palette of a ready PBN item as a file. Substitute {uuid} and {type} directly in the path when calling call_api.',
     authRequired: true,
     group: 'service',
-    notes: 'Returns 409 if the item status is not "ready". Returns 404 if the UUID does not point to a PBN item. The response body is binary or text depending on type (PDF/JPEG/CSV/palette files). rawText in call_api response holds the raw content.',
+    notes: 'Returns 409 if the item status is not "ready". Returns 404 if the UUID does not point to a PBN item. PDF/PNG/binary types return isBinary=true with base64-encoded rawText; decode with: echo "$rawText" | base64 -d > file.ext. Text types (csv, gpl, kpl) return isBinary=false and rawText holds plain text.',
     inputSchema: z.object({
       uuid: z.string().uuid().describe('PBN item key returned by POST /service/pbn.'),
       type: z.enum(PBN_COLOR_DOWNLOAD_TYPES).describe(
@@ -549,7 +549,8 @@ const CallApiOutputSchema = z.object({
     ok: z.boolean(),
     headers: z.record(z.string()),
     body: z.any().nullable(),
-    rawText: z.string()
+    rawText: z.string(),
+    isBinary: z.boolean().describe('True when rawText is base64-encoded binary data. Decode with: echo "$rawText" | base64 -d > file.ext')
   })
 });
 
@@ -731,8 +732,16 @@ async function callApi({
       signal: controller.signal
     });
 
-    const rawText = await response.text();
-    const parsedBody = tryParseJson(rawText);
+    const contentType = response.headers.get('content-type') ?? '';
+    const isBinary = isBinaryContentType(contentType);
+    let rawText;
+    if (isBinary) {
+      const buffer = await response.arrayBuffer();
+      rawText = Buffer.from(buffer).toString('base64');
+    } else {
+      rawText = await response.text();
+    }
+    const parsedBody = isBinary ? null : tryParseJson(rawText);
 
     const structuredContent = {
       request: {
@@ -750,7 +759,8 @@ async function callApi({
         ok: response.ok,
         headers: headersToObject(response.headers),
         body: parsedBody ?? null,
-        rawText
+        rawText,
+        isBinary
       }
     };
 
@@ -955,6 +965,16 @@ function parseHeaderRecord(serialized) {
   }
 
   return {};
+}
+
+function isBinaryContentType(contentType) {
+  const type = contentType.split(';')[0].trim().toLowerCase();
+  return (
+    type === 'application/pdf' ||
+    type === 'application/octet-stream' ||
+    type === 'application/zip' ||
+    (type.startsWith('image/') && type !== 'image/svg+xml')
+  );
 }
 
 function tryParseJson(value) {
