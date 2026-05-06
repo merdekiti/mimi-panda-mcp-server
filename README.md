@@ -176,6 +176,12 @@ Once a PBN item status is `ready`, download its files directly:
 
   Supported `type` values: `pdf`, `pdfshort`, `png`, `pngshort`, `csv`, `swatches`, `gpl`, `kpl`
 
+  For `type=swatches`, the backend may return either:
+  - a single `.swatches` file when the palette has 30 colors or fewer
+  - a `.zip` archive containing multiple `.swatches` files when the palette has more than 30 colors
+
+  Detect which one you received using the `Content-Disposition` filename and the `X-Mimi-Colors-Format` response header (`swatches` or `zip`).
+
 For detailed parameter information, use the `list_api_routes` tool.
 
 ## Development

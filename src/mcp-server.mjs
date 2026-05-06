@@ -485,11 +485,11 @@ const API_ROUTES = [
     description: 'Download the color palette of a ready PBN item as a file. Substitute {uuid} and {type} directly in the path when calling call_api.',
     authRequired: true,
     group: 'service',
-    notes: 'Returns 409 if the item status is not "ready". Returns 404 if the UUID does not point to a PBN item. PDF/PNG/binary types return isBinary=true with base64-encoded rawText; decode with: echo "$rawText" | base64 -d > file.ext. Text types (csv, gpl, kpl) return isBinary=false and rawText holds plain text.',
+    notes: 'Returns 409 if the item status is not "ready". Returns 404 if the UUID does not point to a PBN item. PDF/PNG/binary types return isBinary=true with base64-encoded rawText; decode with: echo "$rawText" | base64 -d > file.ext. Text types (csv, gpl, kpl) return isBinary=false and rawText holds plain text. For type=swatches the API may return either a single .swatches file (<=30 colors) or a .zip archive (>30 colors). Use Content-Disposition filename and X-Mimi-Colors-Format response header (swatches|zip) to detect the exact format.',
     inputSchema: z.object({
       uuid: z.string().uuid().describe('PBN item key returned by POST /service/pbn.'),
       type: z.enum(PBN_COLOR_DOWNLOAD_TYPES).describe(
-        'Color export format. pdf/pdfshort: full or compact color chart as PDF. png/pngshort: full or compact color chart as JPEG image. csv: comma-separated values (Code, Name, Hex, RGB, HSL). swatches: Procreate .swatches file. gpl: GIMP palette. kpl: Krita palette.'
+        'Color export format. pdf/pdfshort: full or compact color chart as PDF. png/pngshort: full or compact color chart as JPEG image. csv: comma-separated values (Code, Name, Hex, RGB, HSL). swatches: Procreate export (.swatches for <=30 colors, .zip with multiple .swatches files for >30 colors). gpl: GIMP palette. kpl: Krita palette.'
       )
     }),
     outputSchema: z.object({

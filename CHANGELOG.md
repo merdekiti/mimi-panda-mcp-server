@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+- Updated PBN color-download docs and route metadata for `GET service/item/{uuid}/pbn/colors/{type}`:
+  - `type=swatches` now documented as returning either `.swatches` (30 colors or fewer) or `.zip` (more than 30 colors, containing multiple `.swatches` files)
+  - Added guidance to detect exact format via `Content-Disposition` and `X-Mimi-Colors-Format` response header (`swatches` or `zip`)
+
 ## [1.1.0] - 2026-05-06
 
 ### Added
