@@ -437,6 +437,7 @@ const API_ROUTES = [
       status: z.string().describe('Current processing status'),
       created: z.string().describe('Creation timestamp (Y-m-d H:i:s)'),
       updated: z.string().describe('Last update timestamp (Y-m-d H:i:s)'),
+      title: z.string().nullish().describe('Human-readable title for PBN and coloring items; omitted or null when not set.'),
       images: z
         .union([
           z.array(z.string().url().nullable()),
