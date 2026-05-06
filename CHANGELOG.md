@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2026-05-06
+
+### Added
+- Two new PBN download endpoints in `API_ROUTES`:
+  - `GET service/item/{uuid}/pbn/download/{type}` — download a finished PBN image in 15 formats (SVG, PNG, PDF variants including outlines, grayscale, origin-with-numbers, and custom with configurable stroke/number colors and optional frame)
+  - `GET service/item/{uuid}/pbn/colors/{type}` — download the PBN color palette in 8 formats (PDF, JPEG, CSV, Procreate `.swatches`, GIMP `.gpl`, Krita `.kpl`)
+- `PBN_IMAGE_DOWNLOAD_TYPES`, `PBN_COLOR_DOWNLOAD_TYPES`, and `PBN_CUSTOM_DOWNLOAD_TYPES` constant arrays for schema enum validation
+- Full Zod input schemas for both download routes including all `custom` type query parameters
+
+### Changed
+- Server version bumped to `1.1.0`
+
 ## [1.0.0] - 2025-11-22
 
 ### Added

@@ -8,7 +8,7 @@ import { readFileSync } from 'node:fs';
 
 const SERVER_INFO = {
   name: 'mimi-panda-mcp-server',
-  version: '1.0.0',
+  version: '1.1.0',
   description: 'Model Context Protocol (MCP) server for interacting with the Mimi Panda Artist API'
 };
 
@@ -64,6 +64,16 @@ const AI_COLORING_STYLES = ['kids_coloring_page', 'teenagers_coloring_page', 'ad
 const AI_COLORING_VERSIONS = ['v1', 'v2'];
 const AI_IMAGE_ASPECT_RATIOS = ['1x1', '2x3', '3x2', '4x5', '5x4'];
 const AI_FILTER_STRENGTH_VALUES = [0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
+const PBN_IMAGE_DOWNLOAD_TYPES = [
+  'pbn', 'origin', 'source',
+  'outlines', 'outlinespng',
+  'grayscale', 'grayscalepng',
+  'pbnpng', 'originpng',
+  'originwithnumbers', 'custom',
+  'pbnpdf', 'outlinespdf', 'grayscalepdf', 'originpdf'
+];
+const PBN_COLOR_DOWNLOAD_TYPES = ['pdf', 'pdfshort', 'png', 'pngshort', 'csv', 'swatches', 'gpl', 'kpl'];
+const PBN_CUSTOM_DOWNLOAD_TYPES = ['pbn', 'outlines', 'hybrid'];
 const IMAGE_OR_URL_SCHEMA = z
   .string()
   .describe('Image upload (multipart file field) or publicly accessible URL. Accepted formats: jpg, png, webp, jpeg, heic, heif. Maximum size: 20MB. Maximum dimensions: 15000x15000px or 4000x4000px for upscale.');
@@ -442,6 +452,47 @@ const API_ROUTES = [
         .describe('Resulting asset URLs (varies by task type).'),
       colors: z.any().optional().describe('Palette metadata for PBN outputs.'),
       parameters: z.record(z.any()).optional().describe('Task-specific parameter echo.')
+    })
+  },
+  {
+    method: 'GET',
+    path: 'service/item/{uuid}/pbn/download/{type}',
+    description: 'Download a ready PBN item as a file. Substitute {uuid} and {type} directly in the path when calling call_api. Returns a binary file download (SVG, PNG, or PDF). Use query params for optional width/height and custom-type overrides.',
+    authRequired: true,
+    group: 'service',
+    notes: 'Returns 409 if the item status is not "ready". Returns 404 if the UUID does not point to a PBN item. The response body is binary; rawText will contain the file bytes. Save using the extension that matches the chosen type. For type=custom all download-* query params are required.',
+    inputSchema: z.object({
+      uuid: z.string().uuid().describe('PBN item key returned by POST /service/pbn.'),
+      type: z.enum(PBN_IMAGE_DOWNLOAD_TYPES).describe(
+        'Download format. SVG types: pbn, origin, source, outlines, grayscale, originwithnumbers, custom. PNG types (require Inkscape): outlinespng, grayscalepng, pbnpng, originpng. PDF types (require Inkscape): pbnpdf, outlinespdf, grayscalepdf, originpdf.'
+      ),
+      width: z.number().int().min(1).max(15000).optional().describe('Export width in pixels. Applies to PNG and PDF types only.'),
+      height: z.number().int().min(1).max(15000).optional().describe('Export height in pixels. Applies to PNG and PDF types only.'),
+      'download-type': z.enum(PBN_CUSTOM_DOWNLOAD_TYPES).optional().describe('Required when type=custom. Determines which elements to render: pbn (numbered regions), outlines (no numbers), hybrid (semi-transparent colors + numbers).'),
+      'download-strokes-color': z.string().optional().describe('Required when type=custom. CSS color for stroke lines (e.g. #000000).'),
+      'download-numbers-color': z.string().optional().describe('Required when type=custom. CSS color for number labels (e.g. #000000).'),
+      'download-hybrid-opacity': z.number().min(0).max(1).optional().describe('Used when type=custom and download-type=hybrid. Opacity of color fills (0–1). Defaults to 0.05.'),
+      'download-frame': z.enum(['yes', 'no']).optional().describe('Used when type=custom. Adds a 5 cm border with corner guide lines (192 px at 96 dpi).')
+    }),
+    outputSchema: z.object({
+      file: z.any().describe('Binary file content. The Content-Disposition response header contains the filename. rawText in call_api response holds the raw bytes.')
+    })
+  },
+  {
+    method: 'GET',
+    path: 'service/item/{uuid}/pbn/colors/{type}',
+    description: 'Download the color palette of a ready PBN item as a file. Substitute {uuid} and {type} directly in the path when calling call_api.',
+    authRequired: true,
+    group: 'service',
+    notes: 'Returns 409 if the item status is not "ready". Returns 404 if the UUID does not point to a PBN item. The response body is binary or text depending on type (PDF/JPEG/CSV/palette files). rawText in call_api response holds the raw content.',
+    inputSchema: z.object({
+      uuid: z.string().uuid().describe('PBN item key returned by POST /service/pbn.'),
+      type: z.enum(PBN_COLOR_DOWNLOAD_TYPES).describe(
+        'Color export format. pdf/pdfshort: full or compact color chart as PDF. png/pngshort: full or compact color chart as JPEG image. csv: comma-separated values (Code, Name, Hex, RGB, HSL). swatches: Procreate .swatches file. gpl: GIMP palette. kpl: Krita palette.'
+      )
+    }),
+    outputSchema: z.object({
+      file: z.any().describe('Binary or text file content. The Content-Disposition response header contains the filename and extension.')
     })
   }
 ];

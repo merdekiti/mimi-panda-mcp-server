@@ -9,6 +9,7 @@ A [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server that p
 
 - 🎨 **Coloring Pages**: Convert images into coloring pages with various styles
 - 🖼️ **Paint by Numbers**: Generate paint-by-numbers images from photos or prompts
+- ⬇️ **PBN Downloads**: Download finished PBN images (SVG, PNG, PDF) and color palettes (PDF, JPEG, CSV, Procreate, GIMP, Krita) directly via API
 - 🤖 **AI Image Generation**: Create images from text prompts
 - 🎭 **AI Filters**: Apply artistic filters to images
 - 📈 **Image Upscaling**: Enhance and upscale images up to 4x
@@ -161,7 +162,21 @@ The server provides access to the following Mimi Panda API endpoints:
 - `POST /api/service/image/filter` - Apply AI filters to images
 - `GET /api/service/item/{uuid}` - Retrieve task results by UUID
 
-For detailed information about each endpoint, use the `list_api_routes` tool.
+### PBN Downloads
+
+Once a PBN item status is `ready`, download its files directly:
+
+- `GET /api/service/item/{uuid}/pbn/download/{type}` - Download a PBN image file
+
+  Supported `type` values: `pbn`, `origin`, `source`, `outlines`, `outlinespng`, `grayscale`, `grayscalepng`, `pbnpng`, `originpng`, `originwithnumbers`, `custom`, `pbnpdf`, `outlinespdf`, `grayscalepdf`, `originpdf`
+
+  Optional query params: `width`, `height` (pixels, for PNG/PDF types). The `custom` type requires additional `download-type`, `download-strokes-color`, and `download-numbers-color` query params.
+
+- `GET /api/service/item/{uuid}/pbn/colors/{type}` - Download the PBN color palette
+
+  Supported `type` values: `pdf`, `pdfshort`, `png`, `pngshort`, `csv`, `swatches`, `gpl`, `kpl`
+
+For detailed parameter information, use the `list_api_routes` tool.
 
 ## Development
 
