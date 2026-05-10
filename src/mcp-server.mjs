@@ -357,7 +357,8 @@ const API_ROUTES = [
           .describe('The minimum size (as a percentage of the shortest side of your image) that a color region must be to remain separate. Increasing this value will combine smaller color regions into larger ones. Default is Auto - automatically detect the minimum size. 0% means no merging.'),
         mode: z.enum(PBN_MODES).optional().describe('Segmentation output mode. Defaults to polygon.'),
         enhancement: z.boolean().optional().describe('Enable smart enhancement technique to remove unnecessary details and improve the overall quality of the image (default true).'),
-        shapeSmoothing: z.boolean().optional().describe('Smooth out the edges of the PBN shapes, resulting in a more seamless appearance but less details (default true).')
+        shapeSmoothing: z.boolean().optional().describe('Smooth out the edges of the PBN shapes, resulting in a more seamless appearance but less details (default true).'),
+        fixedNumbersSize: z.boolean().nullable().optional().describe('When enabled, ensures that all number labels in the generated PBN have a consistent, uniform size. Defaults to false.')
       })
       .refine((data) => data.image || data.prompt, {
         message: 'Provide either image or prompt.'
