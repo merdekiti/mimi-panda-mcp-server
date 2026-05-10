@@ -293,7 +293,8 @@ const API_ROUTES = [
         .describe(
           'Optional coloring style. Defaults to v2_general for version=v2, photo for version=v1.'
         ),
-      version: z.enum(['v1', 'v2']).optional().describe('Processing pipeline version. Defaults to v2.')
+      version: z.enum(['v1', 'v2']).optional().describe('Processing pipeline version. Defaults to v2.'),
+      smart_subject_focus: z.boolean().optional().describe('When enabled, automatically detects and focuses on the main subject of the image for better coloring results. Defaults to false.')
     }),
     outputSchema: TASK_CREATION_OUTPUT_SCHEMA
   },
