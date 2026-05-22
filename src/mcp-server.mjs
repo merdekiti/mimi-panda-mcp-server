@@ -32,9 +32,6 @@ const SENSITIVE_HEADERS = new Set(['authorization', 'x-api-key']);
 const COLORING_V2_TYPES = ['v2_general', 'v2_detailed', 'v2_anime', 'v2_simplified', 'v2_comic'];
 const COLORING_V1_TYPES = ['image', 'photo'];
 const PBN_SEGMENT_COMPLEXITIES = ['none', 'level1', 'level2', 'level3', 'simplest'];
-const PBN_GRADIENT_STEPS = ['high', 'normal'];
-const PBN_COLOR_PRECISIONS = ['high', 'normal', 'low', 'lowest'];
-const PBN_DETAILS_FILTERS = ['ultra', 'high', 'normal', 'low', 'lowest'];
 const PBN_MODES = ['pixel', 'polygon'];
 const COLORING_TYPE_OPTIONS = [...new Set([...COLORING_V2_TYPES, ...COLORING_V1_TYPES])];
 const aiFilterTypesFromJson = JSON.parse(
@@ -324,17 +321,8 @@ const API_ROUTES = [
           .enum(PBN_SEGMENT_COMPLEXITIES)
           .optional()
           .describe('Level of segmentation detail. Defaults to none.'),
-        gradientStep: z
-          .enum(PBN_GRADIENT_STEPS)
-          .optional()
-          .describe('Gradient smoothing level. Defaults to high.'),
-        colorPrecision: z
-          .enum(PBN_COLOR_PRECISIONS)
-          .optional()
-          .describe('Change it only for high contrast pictures. This parameter might lead to the colors number decrease and merging colors zones - fewer details. Defaults to high.'),
         canvasSize: z.string().optional().describe('Target canvas dimensions string in inches. Your Paint by Numbers image will be resized to make the coloring process easier for the selected canvas size. The canvas orientation will be automatically adjusted to match the image orientation. Example: 4x8'),
         crop: z.boolean().optional().describe('Whether to crop input image to fit the selected canvas size.'),
-        detailsFilter: z.enum(PBN_DETAILS_FILTERS).optional().describe('Discard small image patches. The higher value, the more details will be preserved. Defaults to normal.'),
         palette: z
           .number()
           .int()
@@ -357,7 +345,6 @@ const API_ROUTES = [
           .describe('The minimum size (as a percentage of the shortest side of your image) that a color region must be to remain separate. Increasing this value will combine smaller color regions into larger ones. Default is Auto - automatically detect the minimum size. 0% means no merging.'),
         mode: z.enum(PBN_MODES).optional().describe('Segmentation output mode. Defaults to polygon.'),
         enhancement: z.boolean().optional().describe('Enable smart enhancement technique to remove unnecessary details and improve the overall quality of the image (default true).'),
-        shapeSmoothing: z.boolean().optional().describe('Smooth out the edges of the PBN shapes, resulting in a more seamless appearance but less details (default true).'),
         fixedNumbersSize: z.boolean().nullable().optional().describe('When enabled, ensures that all number labels in the generated PBN have a consistent, uniform size. Defaults to false.')
       })
       .refine((data) => data.image || data.prompt, {
