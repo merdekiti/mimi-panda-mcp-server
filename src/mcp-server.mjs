@@ -323,6 +323,11 @@ const API_ROUTES = [
           .describe('Level of segmentation detail. Defaults to none.'),
         canvasSize: z.string().optional().describe('Target canvas dimensions string in inches. Your Paint by Numbers image will be resized to make the coloring process easier for the selected canvas size. The canvas orientation will be automatically adjusted to match the image orientation. Example: 4x8'),
         crop: z.boolean().optional().describe('Whether to crop input image to fit the selected canvas size.'),
+        cropCoordinates: z
+          .string()
+          .optional()
+          .nullable()
+          .describe('Crop region as a JSON string with keys x1, y1, x2, y2 — each a normalized float between 0 and 1 (0,0 = top-left, 1,1 = bottom-right). x2 must be greater than x1 and y2 must be greater than y1. Only applied when crop=true. Example: {"x1":0.1,"y1":0.1,"x2":0.9,"y2":0.9}'),
         palette: z
           .number()
           .int()
