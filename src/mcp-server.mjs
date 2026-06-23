@@ -507,6 +507,46 @@ const API_ROUTES = [
     outputSchema: z.object({
       file: z.any().describe('Binary or text file content. The Content-Disposition response header contains the filename and extension.')
     })
+  },
+  {
+    method: 'POST',
+    path: 'service/color/unmix',
+    description: 'Unmix a color into its primary and secondary paint components using the Mimi Panda color model.',
+    authRequired: true,
+    group: 'service',
+    notes: 'Returns the hex/rgb/hsl of the input color plus two unmix breakdowns: "unmix" (secondary — splits into primary + secondary pigments) and "unmix_primary" (primary only — splits purely into primary pigments). Values in each breakdown are proportions summing to 1.',
+    inputSchema: z.object({
+      hex: z.string().regex(/^#?[0-9a-fA-F]{6}$/).describe('6-digit hex color, with or without leading #. Example: "a3c2f0".')
+    }),
+    outputSchema: z.object({
+      hex: z.string().describe('Normalized 6-digit hex of the input color (no #).'),
+      rgb: z.array(z.number()).length(3).describe('RGB values [R, G, B] each 0–255.'),
+      hsl: z.array(z.number()).length(3).describe('HSL values [H (0–360), S (0–1), L (0–1)].'),
+      unmix: z.record(z.number()).describe('Secondary unmix breakdown: pigment name → proportion (0–1). Example: {"red": 0.4, "blue": 0.3, "white": 0.3}.'),
+      unmix_primary: z.record(z.number()).describe('Primary unmix breakdown: pigment name → proportion (0–1). Uses only primary pigments (red, yellow, blue, black, white).')
+    })
+  },
+  {
+    method: 'POST',
+    path: 'service/color/mix',
+    description: 'Mix 2–4 colors into a single blended result using the Spectral physically-based paint-mixing model (Kubelka-Munk).',
+    authRequired: true,
+    group: 'service',
+    notes: 'Amounts are relative weights and do not need to sum to 1 — the model normalises them internally. Omit "amount" to give all colors equal weight. "tintingStrength" reflects how strongly a pigment tints others (analogous to real paint opacity/dominance); omit it to use the default (1.0).',
+    inputSchema: z.object({
+      colors: z.array(
+        z.object({
+          hex: z.string().regex(/^#?[0-9a-fA-F]{6}$/).describe('6-digit hex of this color, with or without #.'),
+          amount: z.number().min(0.001).optional().describe('Relative weight of this color in the mix. Defaults to 1.0 (equal weight with all others).'),
+          tintingStrength: z.number().min(0).optional().describe('How strongly this pigment tints others (default 1.0). Higher values make this color dominate the mix more.')
+        })
+      ).min(2).max(4).describe('2 to 4 colors to blend together.')
+    }),
+    outputSchema: z.object({
+      hex: z.string().describe('Resulting blended color as a 6-digit hex string (no #).'),
+      rgb: z.array(z.number()).length(3).describe('Resulting color as [R, G, B] each 0–255.'),
+      hsl: z.array(z.number()).length(3).describe('Resulting color as [H (0–360), S (0–1), L (0–1)].')
+    })
   }
 ];
 

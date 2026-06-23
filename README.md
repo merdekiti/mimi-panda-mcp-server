@@ -183,6 +183,16 @@ Once a PBN item status is `ready`, download its files directly:
 
   Detect which one you received using the `Content-Disposition` filename and the `X-Mimi-Colors-Format` response header (`swatches` or `zip`).
 
+### Color Tools
+
+- `POST /api/service/color/unmix` - Unmix a color into its primary and secondary paint components
+
+  Body: `{ "hex": "a3c2f0" }`. Returns `hex`, `rgb`, `hsl`, plus `unmix` (secondary breakdown) and `unmix_primary` (primary breakdown) — each a map of pigment name → proportion.
+
+- `POST /api/service/color/mix` - Mix 2–4 colors into a single blended result using the Spectral physically-based paint model (Kubelka-Munk)
+
+  Body: `{ "colors": [{ "hex": "ff0000", "amount": 2 }, { "hex": "ffff00", "amount": 1 }] }`. `amount` is a relative weight (defaults to equal). Returns a single `{ "hex", "rgb", "hsl" }` object.
+
 For detailed parameter information, use the `list_api_routes` tool.
 
 ## Development
