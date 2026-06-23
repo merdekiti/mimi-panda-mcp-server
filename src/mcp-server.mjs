@@ -59,6 +59,8 @@ const AI_FILTER_TYPES_FULL = Array.from(new Set([...aiFilterTypesFromJson]));
 const AI_COLORING_ASPECT_RATIOS = ['1x1', '2x3', '3x2', '4x3', '3x4', '9x16', '16x9'];
 const AI_COLORING_STYLES = ['kids_coloring_page', 'teenagers_coloring_page', 'adults_coloring_page'];
 const AI_COLORING_VERSIONS = ['v1', 'v2'];
+const NAME_COLORING_FONT_STYLES = ['angular', 'rounded', 'graffiti', 'bubble'];
+const NAME_COLORING_ASPECT_RATIOS = ['1x1', '2x3', '3x2'];
 const AI_IMAGE_ASPECT_RATIOS = ['1x1', '2x3', '3x2', '4x5', '5x4'];
 const AI_FILTER_STRENGTH_VALUES = [0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
 const PBN_IMAGE_DOWNLOAD_TYPES = [
@@ -368,6 +370,22 @@ const API_ROUTES = [
       style: z.enum(AI_COLORING_STYLES).describe('Preset style slug supplied by provider.'),
       aspectRatio: z.enum(AI_COLORING_ASPECT_RATIOS).optional().describe('Canvas aspect ratio.'),
       version: z.enum(AI_COLORING_VERSIONS).describe('Provider version to use.')
+    }),
+    outputSchema: TASK_CREATION_OUTPUT_SCHEMA
+  },
+  {
+    method: 'POST',
+    path: 'service/ai/name-coloring',
+    description: 'Generate a name coloring page from a person\'s name with a chosen font style and optional decorative elements.',
+    authRequired: true,
+    group: 'service',
+    inputSchema: z.object({
+      name: z.string().max(70).describe('Name or short text to render as a coloring page (max 70 characters).'),
+      fontStyle: z.enum(NAME_COLORING_FONT_STYLES).describe('Font style for the name: angular, rounded, graffiti, or bubble.'),
+      aspectRatio: z.enum(NAME_COLORING_ASPECT_RATIOS).describe('Canvas aspect ratio: 1x1, 2x3, or 3x2.'),
+      elementInText: z.string().max(80).optional().nullable().describe('Optional decorative elements to draw inside the letters (max 80 characters). Example: "stars, hearts".'),
+      elementAroundText: z.string().max(80).optional().nullable().describe('Optional decorative elements to draw around the name (max 80 characters). Example: "flowers, butterflies".'),
+      backgroundDecoration: z.string().max(80).optional().nullable().describe('Optional background decoration description (max 80 characters). Example: "simple geometric patterns".')
     }),
     outputSchema: TASK_CREATION_OUTPUT_SCHEMA
   },
