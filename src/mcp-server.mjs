@@ -344,12 +344,20 @@ const API_ROUTES = [
           .optional()
           .describe('Optional AI style filter. Defaults to none.'),
         minArea: z
-          .number()
-          .int()
-          .min(0)
-          .max(100)
+          .union([
+            z.literal('auto'),
+            z
+              .number()
+              .min(0)
+              .max(100)
+              .refine((val) => Number.isInteger(val * 10), {
+                message: 'Must be in 0.1 increments.'
+              })
+          ])
           .optional()
-          .describe('The minimum size (as a percentage of the shortest side of your image) that a color region must be to remain separate. Increasing this value will combine smaller color regions into larger ones. Default is Auto - automatically detect the minimum size. 0% means no merging.'),
+          .describe(
+            'Minimum segment area as a percentage of the shortest image side (0–100 in 0.1 increments, e.g. 0, 1.5, 2.3), or "auto" to compute automatically from canvas size. Increasing this value merges smaller color regions. Defaults to "auto". Non-commercial users are clamped to a minimum of 1.5 server-side.'
+          ),
         mode: z.enum(PBN_MODES).optional().describe('Segmentation output mode. Defaults to polygon.'),
         enhancement: z.boolean().optional().describe('Enable smart enhancement technique to remove unnecessary details and improve the overall quality of the image (default true).'),
         fixedNumbersSize: z.boolean().nullable().optional().describe('When enabled, ensures that all number labels in the generated PBN have a consistent, uniform size. Defaults to false.')

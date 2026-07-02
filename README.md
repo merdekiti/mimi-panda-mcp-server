@@ -156,6 +156,8 @@ The server provides access to the following Mimi Panda API endpoints:
 ### Services
 - `POST /api/service/coloring` - Create coloring pages from images
 - `POST /api/service/pbn` - Generate paint-by-numbers images
+
+  Optional `minArea`: number from 0 to 100 in 0.1 increments (e.g. `0`, `1.5`, `2.3`) or the string `"auto"` (default). Non-commercial accounts are clamped to a minimum of 1.5 server-side.
 - `POST /api/service/ai/coloring` - Generate AI coloring pages from prompts
 - `POST /api/service/ai/name-coloring` - Generate name coloring pages from a name with font style and decorative elements
 - `POST /api/service/ai/image` - Generate AI images from prompts
