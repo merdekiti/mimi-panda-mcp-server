@@ -158,6 +158,8 @@ The server provides access to the following Mimi Panda API endpoints:
 - `POST /api/service/pbn` - Generate paint-by-numbers images
 
   Optional `minArea`: number from 0 to 100 in 0.1 increments (e.g. `0`, `1.5`, `2.3`) or the string `"auto"` (default). Non-commercial accounts are clamped to a minimum of 1.5 server-side.
+
+  Optional cleanup filters: `thinLineWidth` (integer 1–30 px, default `1`) absorbs hairline ridges into surrounding zones; `colorMergeThreshold` (integer 0–100, default `0`) merges adjacent zones with similar colors (`0` disables); `thinZoneMerge` (integer 3–50 px, default `3`) merges zones too narrow to hold a painted number.
 - `POST /api/service/ai/coloring` - Generate AI coloring pages from prompts
 - `POST /api/service/ai/name-coloring` - Generate name coloring pages from a name with font style and decorative elements
 - `POST /api/service/ai/image` - Generate AI images from prompts

@@ -360,7 +360,34 @@ const API_ROUTES = [
           ),
         mode: z.enum(PBN_MODES).optional().describe('Segmentation output mode. Defaults to polygon.'),
         enhancement: z.boolean().optional().describe('Enable smart enhancement technique to remove unnecessary details and improve the overall quality of the image (default true).'),
-        fixedNumbersSize: z.boolean().nullable().optional().describe('When enabled, ensures that all number labels in the generated PBN have a consistent, uniform size. Defaults to false.')
+        fixedNumbersSize: z.boolean().nullable().optional().describe('When enabled, ensures that all number labels in the generated PBN have a consistent, uniform size. Defaults to false.'),
+        thinLineWidth: z
+          .number()
+          .int()
+          .min(1)
+          .max(30)
+          .optional()
+          .describe(
+            'Absorbs hairline ridges into surrounding zones. Increase when the source has many fine outlines or the canvas is large. Value is in pixels (at 96 DPI). Defaults to 1.'
+          ),
+        colorMergeThreshold: z
+          .number()
+          .int()
+          .min(0)
+          .max(100)
+          .optional()
+          .describe(
+            'Merges adjacent zones with similar colors. Higher values reduce nearly-identical shades more aggressively and may lower the final color count. 0 disables merging. Defaults to 0.'
+          ),
+        thinZoneMerge: z
+          .number()
+          .int()
+          .min(3)
+          .max(50)
+          .optional()
+          .describe(
+            'Zones too narrow to hold a painted number are merged into their neighbor. Increase to eliminate slivers. Value is in pixels (at 96 DPI). Defaults to 3.'
+          )
       })
       .refine((data) => data.image || data.prompt, {
         message: 'Provide either image or prompt.'
