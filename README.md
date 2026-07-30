@@ -197,6 +197,55 @@ Once a PBN item status is `ready`, download its files directly:
 
   Body: `{ "colors": [{ "hex": "ff0000", "amount": 2 }, { "hex": "ffff00", "amount": 1 }] }`. `amount` is a relative weight (defaults to equal). Returns a single `{ "hex", "rgb", "hsl" }` object.
 
+### VAL / Virtual Artist Lab
+
+Commercial plan only (`canAccessValApi`). Only the authenticated user's **private** palettes are exposed — brand/public palettes are never returned.
+
+**Private palettes**
+
+- `GET /api/service/val/palettes` - List private palettes
+- `POST /api/service/val/palettes` - Create a private palette
+
+  Body: `{ "palette_name": "My Palette", "colors": [{ "hex": "ff0000" }] }`. `colors` optional (max 100).
+
+- `GET /api/service/val/palettes/{id}` - Get a private palette (colors + options)
+- `DELETE /api/service/val/palettes/{id}` - Delete a private palette
+- `PUT /api/service/val/palettes/{id}/options` - Update palette options
+
+  Body: `{ "printCodes": true }`
+
+- `POST /api/service/val/palettes/{id}/colors` - Add a color
+- `PUT /api/service/val/palettes/{id}/colors/{colorId}` - Edit a color
+- `DELETE /api/service/val/palettes/{id}/colors/{colorId}` - Delete a color (remaining colors are re-indexed)
+- `GET /api/service/val/palettes/{id}/download/{type}` - Download palette as a file
+
+  Supported `type` values: `swatches`, `gpl`, `kpl`, `pdf`, `pdf-short`, `image`, `image-short`, `csv`, `css`, `tailwind`, `json`, `svg`
+
+  Without Premium, only `css`, `tailwind`, and `json` are allowed. Palettes with more than 200 colors cannot export PDF/swatches/image types.
+
+**Color tools**
+
+- `POST /api/service/val/color/details` - Color details + primary/secondary unmix (no brand similar colors)
+
+  Body: `{ "hex": "a3c2f0" }`
+
+- `POST /api/service/val/mix/chart` - Spectral mix chart matrix for 2–10 colors
+
+  Body: `{ "colors": ["ff0000", "ffff00", "0000ff"], "include_diagonal": true }`
+
+- `POST /api/service/val/color/match` - Match a target hex against a private palette or inline colors
+
+  Body requires `hex` plus either `palette_id` or `colors` (1–40). Optional `limit` (1–50, default 20) and `max_components` (1–3, default 3).
+
+- `POST /api/service/val/color-simplifier` - Quantize an image to N colors (multipart; returns PNG)
+- `POST /api/service/val/grid` - Overlay a drawing grid on an image (multipart; returns image)
+
+  `gridType`: `3x3`, `4x4`, or `square` (with optional `squareCells`: 4|6|8|10|12).
+
+- `GET /api/service/val/mimi-panda-palette/similar` - Nearest Mimi Panda palette colors for a hex
+
+  Query: `?hex=a3c2f0`. Returns **at most 10** nearest colors — the full Mimi Panda palette catalog is not exposed.
+
 For detailed parameter information, use the `list_api_routes` tool.
 
 ## Development

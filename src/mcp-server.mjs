@@ -73,6 +73,11 @@ const PBN_IMAGE_DOWNLOAD_TYPES = [
 ];
 const PBN_COLOR_DOWNLOAD_TYPES = ['pdf', 'pdfshort', 'png', 'pngshort', 'csv', 'swatches', 'gpl', 'kpl'];
 const PBN_CUSTOM_DOWNLOAD_TYPES = ['pbn', 'outlines', 'hybrid'];
+const VAL_PALETTE_DOWNLOAD_TYPES = [
+  'swatches', 'gpl', 'kpl', 'pdf', 'pdf-short', 'image', 'image-short',
+  'csv', 'css', 'tailwind', 'json', 'svg'
+];
+const VAL_FREE_DOWNLOAD_TYPES = ['css', 'tailwind', 'json'];
 const IMAGE_OR_URL_SCHEMA = z
   .string()
   .describe('Image upload (multipart file field) or publicly accessible URL. Accepted formats: jpg, png, webp, jpeg, heic, heif. Maximum size: 20MB. Maximum dimensions: 15000x15000px or 4000x4000px for upscale.');
@@ -581,6 +586,321 @@ const API_ROUTES = [
       hex: z.string().describe('Resulting blended color as a 6-digit hex string (no #).'),
       rgb: z.array(z.number()).length(3).describe('Resulting color as [R, G, B] each 0–255.'),
       hsl: z.array(z.number()).length(3).describe('Resulting color as [H (0–360), S (0–1), L (0–1)].')
+    })
+  },
+  // -------------------------------------------------------------------------
+  // VAL / Virtual Artist Lab (Commercial plan; private palettes only)
+  // -------------------------------------------------------------------------
+  {
+    method: 'GET',
+    path: 'service/val/palettes',
+    description: 'List the authenticated user\'s private Virtual Artist Lab palettes.',
+    authRequired: true,
+    group: 'service',
+    notes: 'Requires Commercial plan (canAccessValApi). Brand/public palettes are never returned.',
+    inputSchema: z.object({}),
+    outputSchema: z.object({
+      palettes: z.array(
+        z.object({
+          id: z.number().int().describe('Palette ID.'),
+          name: z.string().describe('URL-safe palette slug.'),
+          title: z.string().describe('Human-readable palette title.'),
+          type: z.string().describe('Always "private" for this endpoint.'),
+          colors_number: z.number().int().describe('Number of colors in the palette.')
+        })
+      ).describe('Array of private palette summaries.')
+    })
+  },
+  {
+    method: 'POST',
+    path: 'service/val/palettes',
+    description: 'Create a new private Virtual Artist Lab palette, optionally with initial colors.',
+    authRequired: true,
+    group: 'service',
+    notes: 'Requires Commercial plan. Returns 403 if the user has reached their palette limit. Returns 400 if a private palette with the same title already exists.',
+    inputSchema: z.object({
+      palette_name: z.string().max(255).describe('Title for the new private palette.'),
+      colors: z.array(
+        z.object({
+          hex: z.string().regex(/^#?[0-9a-fA-F]{6}$/).describe('6-digit hex color, with or without #.'),
+          rgb: z.any().optional().describe('Optional RGB as [R,G,B] or rgb(r,g,b) string. Derived from hex when omitted.'),
+          code: z.string().max(255).optional().describe('Optional color code label.'),
+          name: z.string().max(255).optional().describe('Optional color display name.')
+        })
+      ).max(100).optional().describe('Optional initial colors (max 100).')
+    }),
+    outputSchema: z.object({
+      message: z.string().describe('Success message.'),
+      palette: z.object({
+        id: z.number().int().describe('Created palette ID.'),
+        name: z.string().describe('URL-safe slug.'),
+        title: z.string().describe('Palette title.')
+      }).describe('Created palette summary.')
+    })
+  },
+  {
+    method: 'GET',
+    path: 'service/val/palettes/{id}',
+    description: 'Get a private palette by ID including colors and options. Substitute {id} in the path.',
+    authRequired: true,
+    group: 'service',
+    notes: 'Requires Commercial plan and ownership of the private palette (canAccessOwnPrivatePalette). Returns 404 if not found or not owned.',
+    inputSchema: z.object({
+      id: z.number().int().describe('Private palette ID to substitute in the path.')
+    }),
+    outputSchema: z.object({
+      palette: z.object({
+        id: z.number().int().describe('Palette ID.'),
+        name: z.string().describe('URL-safe slug.'),
+        title: z.string().describe('Palette title.'),
+        colors: z.record(z.any()).describe('Map of hex → color object {id, hex, rgb, name, code}.'),
+        type: z.string().describe('Always "private".'),
+        options: z.record(z.any()).describe('Effective palette options (e.g. printCodes).'),
+        mixedColors: z.union([z.boolean(), z.any()]).describe('Whether mixed-color recipes are available (false when <2 or >250 colors).'),
+        created_at: z.string().describe('Creation timestamp.'),
+        updated_at: z.string().describe('Last update timestamp.')
+      }).describe('Full private palette payload.')
+    })
+  },
+  {
+    method: 'DELETE',
+    path: 'service/val/palettes/{id}',
+    description: 'Delete a private palette by ID. Substitute {id} in the path.',
+    authRequired: true,
+    group: 'service',
+    notes: 'Requires Commercial plan and ownership of the private palette. Returns 404 if not found or not owned.',
+    inputSchema: z.object({
+      id: z.number().int().describe('Private palette ID to substitute in the path.')
+    }),
+    outputSchema: z.object({
+      message: z.string().describe('Success message.')
+    })
+  },
+  {
+    method: 'PUT',
+    path: 'service/val/palettes/{id}/options',
+    description: 'Update private palette options (currently printCodes). Substitute {id} in the path.',
+    authRequired: true,
+    group: 'service',
+    notes: 'Requires Commercial plan and ownership of the private palette.',
+    inputSchema: z.object({
+      id: z.number().int().describe('Private palette ID to substitute in the path.'),
+      printCodes: z.boolean().describe('Whether to print color codes on palette exports.')
+    }),
+    outputSchema: z.object({
+      message: z.string().describe('Success message.'),
+      options: z.record(z.any()).describe('Effective options after update.')
+    })
+  },
+  {
+    method: 'POST',
+    path: 'service/val/palettes/{id}/colors',
+    description: 'Add a color to a private palette. Substitute {id} in the path.',
+    authRequired: true,
+    group: 'service',
+    notes: 'Requires Commercial plan and ownership. Returns 400 for invalid hex, duplicate code, or max colors exceeded.',
+    inputSchema: z.object({
+      id: z.number().int().describe('Private palette ID to substitute in the path.'),
+      hex: z.string().regex(/^#?[0-9a-fA-F]{6}$/).describe('6-digit hex color, with or without #.'),
+      rgb: z.any().optional().describe('Optional RGB as [R,G,B] or rgb(r,g,b) string.'),
+      code: z.string().max(255).optional().describe('Optional color code label.'),
+      name: z.string().max(255).optional().describe('Optional color display name.')
+    }),
+    outputSchema: z.object({
+      message: z.string().describe('Success key, e.g. palette.color_added.'),
+      color: z.object({
+        id: z.number().int().describe('Color ID within the palette.'),
+        hex: z.string().describe('Normalized hex (no #).'),
+        rgb: z.array(z.number()).length(3).describe('RGB [R, G, B].'),
+        name: z.string().describe('Color name.'),
+        code: z.union([z.string(), z.number()]).describe('Color code label.')
+      }).describe('Added color object.')
+    })
+  },
+  {
+    method: 'PUT',
+    path: 'service/val/palettes/{id}/colors/{colorId}',
+    description: 'Edit a color in a private palette. Substitute {id} and {colorId} in the path.',
+    authRequired: true,
+    group: 'service',
+    notes: 'Requires Commercial plan and ownership. Returns 404 if colorId is not in the palette; 400 if code already exists on another color.',
+    inputSchema: z.object({
+      id: z.number().int().describe('Private palette ID to substitute in the path.'),
+      colorId: z.number().int().describe('Color ID within the palette to substitute in the path.'),
+      hex: z.string().regex(/^#?[0-9a-fA-F]{6}$/).describe('New 6-digit hex color, with or without #.'),
+      rgb: z.any().optional().describe('Optional RGB as [R,G,B] or rgb(r,g,b) string.'),
+      code: z.string().max(255).optional().describe('Optional new color code label.'),
+      name: z.string().max(255).optional().describe('Optional new color display name.')
+    }),
+    outputSchema: z.object({
+      message: z.string().describe('Success key, e.g. palette.color_updated.'),
+      color: z.object({
+        id: z.number().int().describe('Color ID within the palette.'),
+        hex: z.string().describe('Normalized hex (no #).'),
+        rgb: z.array(z.number()).length(3).describe('RGB [R, G, B].'),
+        name: z.string().describe('Color name.'),
+        code: z.union([z.string(), z.number()]).describe('Color code label.')
+      }).describe('Updated color object.')
+    })
+  },
+  {
+    method: 'DELETE',
+    path: 'service/val/palettes/{id}/colors/{colorId}',
+    description: 'Delete a color from a private palette. Substitute {id} and {colorId} in the path. Remaining colors are re-indexed.',
+    authRequired: true,
+    group: 'service',
+    notes: 'Requires Commercial plan and ownership. Returns 404 if colorId is not in the palette.',
+    inputSchema: z.object({
+      id: z.number().int().describe('Private palette ID to substitute in the path.'),
+      colorId: z.number().int().describe('Color ID within the palette to substitute in the path.')
+    }),
+    outputSchema: z.object({
+      message: z.string().describe('Success message.')
+    })
+  },
+  {
+    method: 'GET',
+    path: 'service/val/palettes/{id}/download/{type}',
+    description: 'Download a private palette as a file. Substitute {id} and {type} in the path. Returns a binary/text file download.',
+    authRequired: true,
+    group: 'service',
+    notes: `Requires Commercial plan and ownership. Free download types without Premium: ${VAL_FREE_DOWNLOAD_TYPES.join(', ')}. Other types require a Premium subscription. Palettes with >200 colors cannot export pdf/swatches/image types (use csv/gpl/kpl/css/tailwind/json). Response is a file; isBinary depends on format.`,
+    inputSchema: z.object({
+      id: z.number().int().describe('Private palette ID to substitute in the path.'),
+      type: z.enum(VAL_PALETTE_DOWNLOAD_TYPES).describe(
+        'Export format: swatches (Procreate), gpl (GIMP), kpl (Krita), pdf, pdf-short, image, image-short, csv, css, tailwind, json, svg.'
+      )
+    }),
+    outputSchema: z.object({
+      file: z.any().describe('Binary or text file content. Content-Disposition contains the filename.')
+    })
+  },
+  {
+    method: 'POST',
+    path: 'service/val/color/details',
+    description: 'Get detailed color info (hex, rgb, hsl, name, and primary/secondary unmix). Brand similar colors are not included.',
+    authRequired: true,
+    group: 'service',
+    notes: 'Requires Commercial plan. Brand/vendor similar colors are intentionally omitted from the Service API.',
+    inputSchema: z.object({
+      hex: z.string().regex(/^#?[0-9a-fA-F]{6}$/).describe('6-digit hex color, with or without #.')
+    }),
+    outputSchema: z.object({
+      hex: z.string().describe('Normalized 6-digit hex (no #).'),
+      rgb: z.array(z.number()).length(3).describe('RGB [R, G, B] each 0–255.'),
+      hsl: z.array(z.number()).length(3).describe('HSL [H (0–360), S (0–1), L (0–1)].'),
+      unmix: z.record(z.number()).describe('Secondary unmix breakdown: pigment → proportion.'),
+      unmix_primary: z.record(z.number()).describe('Primary unmix breakdown: pigment → proportion.'),
+      name: z.string().describe('Human-readable color name.')
+    })
+  },
+  {
+    method: 'POST',
+    path: 'service/val/mix/chart',
+    description: 'Build a spectral paint-mixing chart matrix for 2–10 hex colors.',
+    authRequired: true,
+    group: 'service',
+    notes: 'Requires Commercial plan. Returns a square matrix of pairwise mixes via the Spectral (Kubelka-Munk) model.',
+    inputSchema: z.object({
+      colors: z.array(z.string().regex(/^#?[0-9a-fA-F]{6}$/)).min(2).max(10).describe('2–10 hex colors to include in the mix chart.'),
+      include_diagonal: z.boolean().optional().describe('Include self-mix diagonal cells. Defaults to true.')
+    }),
+    outputSchema: z.object({
+      size: z.number().int().describe('Matrix dimension (number of input colors).'),
+      hexes: z.array(z.string()).describe('Normalized input hexes used as row/column labels.'),
+      matrix: z.array(z.array(z.object({
+        hex: z.string().describe('Mixed result hex.'),
+        rgb: z.array(z.number()).length(3).describe('Mixed RGB.'),
+        hsl: z.array(z.number()).length(3).describe('Mixed HSL.')
+      }))).describe('2D array of mix results; matrix[i][j] is colors[i] mixed with colors[j].')
+    })
+  },
+  {
+    method: 'POST',
+    path: 'service/val/color/match',
+    description: 'Find paint recipes that best match a target hex against a private palette or an inline color list.',
+    authRequired: true,
+    group: 'service',
+    notes: 'Requires Commercial plan. Provide either palette_id (own private palette) or colors (1–40 inline colors). Returns single/double/triple mix recipes ranked by distance.',
+    inputSchema: z.object({
+      hex: z.string().regex(/^#?[0-9a-fA-F]{6}$/).describe('Target 6-digit hex to match.'),
+      palette_id: z.number().int().optional().describe('Own private palette ID to match against. Mutually exclusive with colors (one of the two is required).'),
+      colors: z.array(
+        z.object({
+          hex: z.string().regex(/^#?[0-9a-fA-F]{6}$/).describe('Palette color hex.'),
+          id: z.any().optional().describe('Optional color id.'),
+          name: z.string().max(255).optional().describe('Optional color name.'),
+          code: z.string().max(255).optional().describe('Optional color code.')
+        })
+      ).min(1).max(40).optional().describe('Inline palette colors (1–40). Required if palette_id is omitted.'),
+      limit: z.number().int().min(1).max(50).optional().describe('Max matches to return. Defaults to 20.'),
+      max_components: z.number().int().min(1).max(3).optional().describe('Max pigments per recipe (1–3). Defaults to 3.')
+    }),
+    outputSchema: z.object({
+      matches: z.array(z.any()).describe('Ranked match recipes (type single|double|triple, mixed color, distance, components).'),
+      count: z.number().int().describe('Number of matches returned.')
+    })
+  },
+  {
+    method: 'POST',
+    path: 'service/val/color-simplifier',
+    description: 'Quantize an uploaded image to a limited color palette (color simplifier). Returns a PNG image.',
+    authRequired: true,
+    group: 'service',
+    notes: 'Requires Commercial plan. Multipart form upload required (not JSON). Response Content-Type is image/png; isBinary=true in call_api.',
+    inputSchema: z.object({
+      image: z.string().describe('Multipart file field. Accepted: jpg, jpeg, png, webp. Max 20MB.'),
+      numberOfColors: z.number().int().min(2).max(100).describe('Target number of colors in the quantized result.'),
+      minArea: z.number().min(0).max(50).describe('Minimum region area as a percentage (0–50). Small regions below this threshold are merged.'),
+      segmentsComplexity: z.number().int().min(0).max(100).describe('Meanshift preprocessing strength (0 disables; 1–100 increases segmentation complexity).')
+    }),
+    outputSchema: z.object({
+      file: z.any().describe('PNG binary image. Content-Type: image/png.')
+    })
+  },
+  {
+    method: 'POST',
+    path: 'service/val/grid',
+    description: 'Overlay a drawing grid on an uploaded image. Returns the gridded image as binary.',
+    authRequired: true,
+    group: 'service',
+    notes: 'Requires Commercial plan. Multipart form upload required. gridType=square uses squareCells (4|6|8|10|12, default 4).',
+    inputSchema: z.object({
+      image: z.string().describe('Multipart file field. Accepted: jpg, jpeg, png, webp. Max 20MB.'),
+      gridType: z.enum(['3x3', '4x4', 'square']).describe('Grid layout type.'),
+      squareCells: z.union([z.literal(4), z.literal(6), z.literal(8), z.literal(10), z.literal(12)]).optional().describe('Cells per side when gridType=square. Defaults to 4.'),
+      showDiagonals: z.boolean().optional().describe('Draw diagonal guide lines. Defaults to false.'),
+      strokeColor: z.string().regex(/^#?[0-9a-fA-F]{6}$/).optional().describe('Grid stroke color hex. Defaults to #007bff.'),
+      strokeThickness: z.number().min(1).max(10).optional().describe('Stroke thickness. Defaults to 2.'),
+      format: z.enum(['jpeg', 'jpg', 'png']).optional().describe('Output image format. Defaults to jpeg.'),
+      quality: z.number().int().min(1).max(100).optional().describe('JPEG quality (1–100). Defaults to 90.')
+    }),
+    outputSchema: z.object({
+      file: z.any().describe('Binary image content. Content-Type matches the chosen format.')
+    })
+  },
+  {
+    method: 'GET',
+    path: 'service/val/mimi-panda-palette/similar',
+    description: 'Return the 10 nearest colors in the Mimi Panda palette for a given hex. Pass hex as a query parameter.',
+    authRequired: true,
+    group: 'service',
+    notes: 'Requires Commercial plan. Returns at most 10 nearest colors only — the full Mimi Panda palette catalog is NOT exposed. If an exact match exists it is included with distance 0.',
+    inputSchema: z.object({
+      hex: z.string().regex(/^#?[0-9a-fA-F]{6}$/).describe('Query parameter: 6-digit hex color to find nearest Mimi Panda palette colors for.')
+    }),
+    outputSchema: z.object({
+      hex: z.string().describe('Normalized input hex (no #).'),
+      colors: z.array(
+        z.object({
+          hex: z.string().describe('Palette color hex.'),
+          name: z.string().describe('Palette color name.'),
+          code: z.string().describe('Palette color code.'),
+          rgb: z.array(z.number()).length(3).describe('RGB values.'),
+          hsl: z.array(z.number()).length(3).describe('HSL values.'),
+          distance: z.number().describe('Normalized HSL distance from the input (0 = exact).')
+        }).passthrough()
+      ).max(10).describe('Up to 10 nearest Mimi Panda palette colors (never the full catalog).')
     })
   }
 ];
