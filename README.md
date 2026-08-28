@@ -252,6 +252,14 @@ Commercial plan only (`canAccessValApi`). Only the authenticated user's **privat
 
   `gridType`: `3x3`, `4x4`, or `square` (with optional `squareCells`: 4|6|8|10|12).
 
+- `POST /api/service/val/outlines` - Convert an image to a printable black-and-white outline (multipart; returns PNG)
+
+  `mode`: `fast`, `detailed`, or `clean`. Optional `showGrid` + `gridSize` (`3` or `4`).
+
+- `POST /api/service/val/tonal-values` - Convert an image to a light/midtone/shadow study or color map (multipart; returns PNG)
+
+  `mode`: `light`, `midtone`, `shadow`, or `colorMap`.
+
 - `GET /api/service/val/mimi-panda-palette/similar` - Nearest Mimi Panda palette colors for a hex
 
   Query: `?hex=a3c2f0`. Returns **at most 10** nearest colors — the full Mimi Panda palette catalog is not exposed.

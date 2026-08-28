@@ -933,6 +933,38 @@ const API_ROUTES = [
     })
   },
   {
+    method: 'POST',
+    path: 'service/val/outlines',
+    description: 'Convert an uploaded photo into a black-and-white printable outline. Fast is balanced, Detailed keeps more small edges, Clean suppresses more noise. Optional 3×3 or 4×4 red grid overlay.',
+    authRequired: true,
+    group: 'service',
+    notes: 'Requires Commercial plan. Multipart form upload required (not JSON). Response Content-Type is image/png; isBinary=true in call_api. Longest side is capped at 1800 px.',
+    inputSchema: z.object({
+      image: z.string().describe('Multipart file field. Accepted: jpg, jpeg, png, webp. Max 20MB.'),
+      mode: z.enum(['fast', 'detailed', 'clean']).describe('Outline algorithm: fast (balanced), detailed (more small edges), or clean (suppresses more noise).'),
+      showGrid: z.boolean().optional().describe('Overlay a red grid on the outline. Defaults to false.'),
+      gridSize: z.union([z.literal(3), z.literal(4)]).optional().describe('Grid size when showGrid is true: 3 (3×3) or 4 (4×4). Defaults to 3.')
+    }),
+    outputSchema: z.object({
+      file: z.any().describe('PNG binary image. Content-Type: image/png.')
+    })
+  },
+  {
+    method: 'POST',
+    path: 'service/val/tonal-values',
+    description: 'Convert an uploaded photo into a tonal study: light / midtone / shadow value shapes, or a 17-stop color map. Shadow and light boundaries are fixed at 50% and 67%.',
+    authRequired: true,
+    group: 'service',
+    notes: 'Requires Commercial plan. Multipart form upload required. Response Content-Type is image/png; isBinary=true in call_api. mode=colorMap is camelCase.',
+    inputSchema: z.object({
+      image: z.string().describe('Multipart file field. Accepted: jpg, jpeg, png, webp. Max 20MB.'),
+      mode: z.enum(['light', 'midtone', 'shadow', 'colorMap']).describe('Tonal study type: light, midtone, shadow, or colorMap (17-stop color map).')
+    }),
+    outputSchema: z.object({
+      file: z.any().describe('PNG binary image. Content-Type: image/png.')
+    })
+  },
+  {
     method: 'GET',
     path: 'service/val/mimi-panda-palette/similar',
     description: 'Return the 10 nearest colors in the Mimi Panda palette for a given hex. Pass hex as a query parameter.',
