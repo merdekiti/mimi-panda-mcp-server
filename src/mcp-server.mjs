@@ -61,7 +61,7 @@ const AI_COLORING_STYLES = ['kids_coloring_page', 'teenagers_coloring_page', 'ad
 const AI_COLORING_VERSIONS = ['v1', 'v2'];
 const NAME_COLORING_FONT_STYLES = ['angular', 'rounded', 'graffiti', 'bubble'];
 const NAME_COLORING_ASPECT_RATIOS = ['1x1', '2x3', '3x2'];
-const AI_IMAGE_ASPECT_RATIOS = ['1x1', '2x3', '3x2', '4x5', '5x4'];
+const AI_IMAGE_ASPECT_RATIOS = ['1x1', '2x3', '3x2', '4x5', '5x4', '4x3', '3x4', '9x16', '16x9'];
 const AI_FILTER_STRENGTH_VALUES = [0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0];
 const PBN_IMAGE_DOWNLOAD_TYPES = [
   'pbn', 'origin', 'source',
@@ -78,6 +78,17 @@ const VAL_PALETTE_DOWNLOAD_TYPES = [
   'csv', 'css', 'tailwind', 'json', 'svg'
 ];
 const VAL_FREE_DOWNLOAD_TYPES = ['css', 'tailwind', 'json'];
+const LIST_ITEM_TYPES = [
+  'coloring',
+  'pbn',
+  'ai_coloring',
+  'ai_image',
+  'name_coloring',
+  'upscale',
+  'ai_filter'
+];
+const LIST_ITEM_STATUSES = ['in_queue', 'processing', 'ready', 'failed'];
+const GET_ITEM_STATUSES = [...LIST_ITEM_STATUSES, 'banned'];
 const IMAGE_OR_URL_SCHEMA = z
   .string()
   .describe('Image upload (multipart file field) or publicly accessible URL. Accepted formats: jpg, png, webp, jpeg, heic, heif. Maximum size: 20MB. Maximum dimensions: 15000x15000px or 4000x4000px for upscale.');
@@ -477,6 +488,38 @@ const API_ROUTES = [
   },
   {
     method: 'GET',
+    path: 'service/items',
+    description: 'List the authenticated user\'s generated items with optional type and status filters.',
+    authRequired: true,
+    group: 'service',
+    notes: 'Returns a slim paginated list from api_model_keys. Use GET /service/item/{uuid} for full detail (colors, prompts, images). thumbnail is null until status is ready. Banned items are excluded from the list and cannot be filtered via ?status=banned.',
+    inputSchema: z.object({
+      type: z.enum(LIST_ITEM_TYPES).optional().describe('Filter by public item type. ai_coloring matches both catalog_coloring and catalog_coloring_v2 internally.'),
+      status: z.enum(LIST_ITEM_STATUSES).optional().describe('Filter by processing status (in_queue, processing, ready, failed). When omitted, only those four statuses are included; banned items are never listed.'),
+      page: z.number().int().min(1).optional().describe('Page number for pagination (default 1).'),
+      per_page: z.number().int().min(1).max(100).optional().describe('Items per page (default 24, max 100).')
+    }),
+    outputSchema: z.object({
+      data: z.array(
+        z.object({
+          key: z.string().uuid().describe('Item UUID key.'),
+          type: z.enum(LIST_ITEM_TYPES).describe('Item type.'),
+          status: z.enum(LIST_ITEM_STATUSES).describe('Current processing status.'),
+          created: z.string().describe('Creation timestamp (Y-m-d H:i:s).'),
+          title: z.string().nullable().describe('Human-readable title when set; otherwise null.'),
+          thumbnail: z.string().url().nullable().describe('Preview image URL when status is ready; otherwise null.')
+        })
+      ).describe('Matching items for the current page.'),
+      meta: z.object({
+        current_page: z.number().int().describe('Current page number.'),
+        last_page: z.number().int().describe('Last available page number.'),
+        per_page: z.number().int().describe('Items per page.'),
+        total: z.number().int().describe('Total matching items across all pages.')
+      }).describe('Laravel pagination metadata.')
+    })
+  },
+  {
+    method: 'GET',
     path: 'service/item/{uuid}',
     description: 'Retrieve a generated item by its UUID.',
     authRequired: true,
@@ -486,10 +529,12 @@ const API_ROUTES = [
     }),
     outputSchema: z.object({
       key: z.string().describe('Echo of supplied UUID key'),
-      status: z.string().describe('Current processing status'),
+      type: z.enum(LIST_ITEM_TYPES).describe('Public item type (maps internal DB types to API-friendly names).'),
+      status: z.enum(GET_ITEM_STATUSES).describe('Current processing status. banned is terminal and includes a localized error message.'),
       created: z.string().describe('Creation timestamp (Y-m-d H:i:s)'),
       updated: z.string().describe('Last update timestamp (Y-m-d H:i:s)'),
       title: z.string().nullish().describe('Human-readable title for PBN and coloring items; omitted or null when not set.'),
+      error: z.string().optional().describe('Localized user-facing message when status is banned (content moderation).'),
       images: z
         .union([
           z.array(z.string().url().nullable()),

@@ -165,7 +165,13 @@ The server provides access to the following Mimi Panda API endpoints:
 - `POST /api/service/ai/image` - Generate AI images from prompts
 - `POST /api/service/image/upscale` - Upscale images (2x or 4x)
 - `POST /api/service/image/filter` - Apply AI filters to images
-- `GET /api/service/item/{uuid}` - Retrieve task results by UUID
+- `GET /api/service/items` - List the authenticated user's generated items (paginated)
+
+  Optional query params: `type` (`coloring`, `pbn`, `ai_coloring`, `ai_image`, `name_coloring`, `upscale`, `ai_filter`), `status` (`in_queue`, `processing`, `ready`, `failed`), `page` (default `1`), `per_page` (default `24`, max `100`). Returns a slim list (`key`, `type`, `status`, `created`, `title`, `thumbnail`); use `GET /api/service/item/{uuid}` for full detail. `type` values are public API names (not internal DB types). `thumbnail` is `null` until `status` is `ready`. Banned items are excluded from the list and cannot be filtered via `?status=banned`.
+
+  Example (mobile PBN gallery): `GET /api/service/items?type=pbn&status=ready&page=1&per_page=24`
+
+- `GET /api/service/item/{uuid}` - Retrieve task results by UUID. Response includes top-level `type` (same public enum as the list endpoint). Terminal statuses: `ready`, `failed`, `banned`. A `banned` item includes a localized `error` message when content moderation blocked the generated image.
 
 ### PBN Downloads
 
