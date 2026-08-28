@@ -413,14 +413,18 @@ const API_ROUTES = [
   {
     method: 'POST',
     path: 'service/ai/coloring',
-    description: 'Generate an AI-powered coloring page from a prompt.',
+    description: 'Generate an AI coloring page from a text prompt, optionally guided by a reference image.',
     authRequired: true,
     group: 'service',
+    notes: 'Optional image is a reference (image-to-image); omit it for text-to-image. Prompt is always required. Send as multipart/form-data when uploading a file; a URL string may be sent as the image field. JSON-only body cannot carry a file. When a reference is present, output dimensions follow the reference aspect ratio (longest side ≤ 2048px, sides multiple of 8, min 256); aspectRatio is ignored. Content moderation runs on both prompt and reference (400 for trademark/protected content; 503 if moderation fails). HEIC is converted to JPG server-side. version is unused and ignored.',
     inputSchema: z.object({
       prompt: z.string().min(3).max(600).describe('Text prompt for generation.'),
-      style: z.enum(AI_COLORING_STYLES).describe('Preset style slug supplied by provider.'),
-      aspectRatio: z.enum(AI_COLORING_ASPECT_RATIOS).optional().describe('Canvas aspect ratio.'),
-      version: z.enum(AI_COLORING_VERSIONS).describe('Provider version to use.')
+      style: z.enum(AI_COLORING_STYLES).describe('Preset style slug: kids_coloring_page (bold simple outlines), teenagers_coloring_page (moderate detail), adults_coloring_page (thin precise intricate outlines).'),
+      aspectRatio: z.enum(AI_COLORING_ASPECT_RATIOS).optional().describe('Canvas aspect ratio. Defaults to 1x1. Ignored when a reference image is provided.'),
+      image: IMAGE_OR_URL_SCHEMA.optional().describe(
+        'Optional reference image (multipart file or public URL). When provided, generation is image-to-image: keep the subject recognizable and apply the prompt. Result is a black-and-white coloring page in the chosen style. Output size follows the reference (longest side ≤ 2048px); aspectRatio is ignored. Prompt is still required.'
+      ),
+      version: z.enum(AI_COLORING_VERSIONS).optional().describe('Unused. Ignored by the API; kept for backward compatibility.')
     }),
     outputSchema: TASK_CREATION_OUTPUT_SCHEMA
   },
@@ -443,12 +447,16 @@ const API_ROUTES = [
   {
     method: 'POST',
     path: 'service/ai/image',
-    description: 'Generate AI images from a text prompt.',
+    description: 'Generate an AI image from a text prompt, optionally guided by a reference image.',
     authRequired: true,
     group: 'service',
+    notes: 'Optional image is a reference (image-to-image); omit it for text-to-image. Prompt is always required. Send as multipart/form-data when uploading a file; a URL string may be sent as the image field. JSON-only body cannot carry a file. When a reference is present, output dimensions follow the reference aspect ratio (longest side ≤ 2048px, sides multiple of 8, min 256). aspectRatio remains required by validation but is ignored for output size. Content moderation runs on both prompt and reference (400 for trademark/protected content; 503 if moderation fails). HEIC is converted to JPG server-side.',
     inputSchema: z.object({
       prompt: z.string().min(3).max(600).describe('Text prompt for generation.'),
-      aspectRatio: z.enum(AI_IMAGE_ASPECT_RATIOS).describe('Canvas aspect ratio.')
+      aspectRatio: z.enum(AI_IMAGE_ASPECT_RATIOS).describe('Canvas aspect ratio. Required by validation; ignored for output dimensions when a reference image is provided.'),
+      image: IMAGE_OR_URL_SCHEMA.optional().describe(
+        'Optional reference image (multipart file or public URL). When provided, generation is image-to-image: keep the subject recognizable and apply the prompt. Result is a polished full-color image. Output size follows the reference (longest side ≤ 2048px); aspectRatio is ignored for dimensions. Prompt is still required.'
+      )
     }),
     outputSchema: TASK_CREATION_OUTPUT_SCHEMA
   },
