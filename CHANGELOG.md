@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated PBN color-download docs and route metadata for `GET service/item/{uuid}/pbn/colors/{type}`:
   - `type=swatches` now documented as returning either `.swatches` (30 colors or fewer) or `.zip` (more than 30 colors, containing multiple `.swatches` files)
   - Added guidance to detect exact format via `Content-Disposition` and `X-Mimi-Colors-Format` response header (`swatches` or `zip`)
+  - Added `segments` (per-code segments and area CSV) and `bycolor` (area grouped by palette color CSV when mixing is on)
 
 ## [1.1.0] - 2026-05-06
 

@@ -71,7 +71,7 @@ const PBN_IMAGE_DOWNLOAD_TYPES = [
   'originwithnumbers', 'custom',
   'pbnpdf', 'outlinespdf', 'grayscalepdf', 'originpdf'
 ];
-const PBN_COLOR_DOWNLOAD_TYPES = ['pdf', 'pdfshort', 'png', 'pngshort', 'csv', 'swatches', 'gpl', 'kpl'];
+const PBN_COLOR_DOWNLOAD_TYPES = ['pdf', 'pdfshort', 'png', 'pngshort', 'csv', 'swatches', 'gpl', 'kpl', 'segments', 'bycolor'];
 const PBN_CUSTOM_DOWNLOAD_TYPES = ['pbn', 'outlines', 'hybrid'];
 const VAL_PALETTE_DOWNLOAD_TYPES = [
   'swatches', 'gpl', 'kpl', 'pdf', 'pdf-short', 'image', 'image-short',
@@ -85,7 +85,8 @@ const LIST_ITEM_TYPES = [
   'ai_image',
   'name_coloring',
   'upscale',
-  'ai_filter'
+  'ai_filter',
+  'image_edit'
 ];
 const LIST_ITEM_STATUSES = ['in_queue', 'processing', 'ready', 'failed'];
 const GET_ITEM_STATUSES = [...LIST_ITEM_STATUSES, 'banned'];
@@ -447,16 +448,13 @@ const API_ROUTES = [
   {
     method: 'POST',
     path: 'service/ai/image',
-    description: 'Generate an AI image from a text prompt, optionally guided by a reference image.',
+    description: 'Generate an AI image from a text prompt (text-to-image only).',
     authRequired: true,
     group: 'service',
-    notes: 'Optional image is a reference (image-to-image); omit it for text-to-image. Prompt is always required. Send as multipart/form-data when uploading a file; a URL string may be sent as the image field. JSON-only body cannot carry a file. When a reference is present, output dimensions follow the reference aspect ratio (longest side ≤ 2048px, sides multiple of 8, min 256). aspectRatio remains required by validation but is ignored for output size. Content moderation runs on both prompt and reference (400 for trademark/protected content; 503 if moderation fails). HEIC is converted to JPG server-side.',
+    notes: 'Text-only: no reference image is accepted. Sending an image field returns 400 with a message pointing to POST /service/image/edit; use that endpoint to edit an existing image with a prompt. Content moderation runs on the prompt (400 for trademark/protected content; 503 if moderation fails).',
     inputSchema: z.object({
       prompt: z.string().min(3).max(600).describe('Text prompt for generation.'),
-      aspectRatio: z.enum(AI_IMAGE_ASPECT_RATIOS).describe('Canvas aspect ratio. Required by validation; ignored for output dimensions when a reference image is provided.'),
-      image: IMAGE_OR_URL_SCHEMA.optional().describe(
-        'Optional reference image (multipart file or public URL). When provided, generation is image-to-image: keep the subject recognizable and apply the prompt. Result is a polished full-color image. Output size follows the reference (longest side ≤ 2048px); aspectRatio is ignored for dimensions. Prompt is still required.'
-      )
+      aspectRatio: z.enum(AI_IMAGE_ASPECT_RATIOS).describe('Canvas aspect ratio.')
     }),
     outputSchema: TASK_CREATION_OUTPUT_SCHEMA
   },
@@ -492,6 +490,31 @@ const API_ROUTES = [
         })
         .describe('Effect strength multiplier.')
     }),
+    outputSchema: TASK_CREATION_OUTPUT_SCHEMA
+  },
+  {
+    method: 'POST',
+    path: 'service/image/edit',
+    description: 'Edit an existing image according to a text instruction while preserving everything else.',
+    authRequired: true,
+    group: 'service',
+    notes: 'Provide exactly one of image or source_key (both → 400). Send as multipart/form-data when uploading a file; a URL string may be sent as the image field, and source_key works with a JSON body. source_key must be the UUID of one of the caller\'s own ready Service API items: coloring (photo coloring page) or task items ai_image, ai_coloring (first image), name_coloring, upscale, ai_filter, image_edit. PBN is not supported. Errors: 400 validation/moderation; 403 no credits or queue full; 404 source_key not found, foreign, not ready, or unsupported; 429 rate limited (20 submissions per minute per user, body {"error": "..."}, Retry-After header gives the wait in seconds); 503 moderation service failure. Cost: 1 credit on paid plans (4 trial credits on free). Failed edits are refunded; banned results are not. Poll GET /service/item/{uuid}: type is image_edit, images is an array with one URL, parameters is { prompt }.',
+    inputSchema: z.object({
+      prompt: z.string().min(3).max(600).describe('Instruction describing the changes to apply (3-600 characters).'),
+      image: IMAGE_OR_URL_SCHEMA.optional().describe(
+        'Image to edit (multipart file or public URL). JPG, PNG, or WebP (HEIC is converted). Max 10MB and 6000x6000px. Required unless source_key is sent; cannot be combined with source_key.'
+      ),
+      source_key: z
+        .string()
+        .uuid()
+        .optional()
+        .describe(
+          'UUID of one of your own ready Service API items to edit instead of uploading. Supported types: coloring, ai_image, ai_coloring (first image), name_coloring, upscale, ai_filter, image_edit. PBN is not supported. Required unless image is sent; cannot be combined with image.'
+        )
+    })
+      .refine((data) => Boolean(data.image) !== Boolean(data.source_key), {
+        message: 'Provide exactly one of image or source_key.'
+      }),
     outputSchema: TASK_CREATION_OUTPUT_SCHEMA
   },
   {
@@ -594,7 +617,7 @@ const API_ROUTES = [
     inputSchema: z.object({
       uuid: z.string().uuid().describe('PBN item key returned by POST /service/pbn.'),
       type: z.enum(PBN_COLOR_DOWNLOAD_TYPES).describe(
-        'Color export format. pdf/pdfshort: full or compact color chart as PDF. png/pngshort: full or compact color chart as JPEG image. csv: comma-separated values (Code, Name, Hex, RGB, HSL). swatches: Procreate export (.swatches for <=30 colors, .zip with multiple .swatches files for >30 colors). gpl: GIMP palette. kpl: Krita palette.'
+        'Color export format. pdf/pdfshort: full or compact color chart as PDF. png/pngshort: full or compact color chart as JPEG image. csv: comma-separated values (Code, Name, Hex, RGB, HSL). swatches: Procreate export (.swatches for <=30 colors, .zip with multiple .swatches files for >30 colors). gpl: GIMP palette. kpl: Krita palette. segments: per-code segments and area CSV. bycolor: area grouped by palette color CSV (when color mixing is on).'
       )
     }),
     outputSchema: z.object({

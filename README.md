@@ -164,14 +164,17 @@ The server provides access to the following Mimi Panda API endpoints:
 
   Optional `image`: multipart file or public URL (jpg, png, webp, jpeg, heic, heif; max 20MB). Prompt is still required. When `image` is set, generation is image-to-image (subject stays recognizable; output size follows the reference, longest side ≤ 2048px; `aspectRatio` is ignored). Use `multipart/form-data` when uploading a file.
 - `POST /api/service/ai/name-coloring` - Generate name coloring pages from a name with font style and decorative elements
-- `POST /api/service/ai/image` - Generate AI images from a text prompt, optionally guided by a reference image
+- `POST /api/service/ai/image` - Generate AI images from a text prompt (text-only)
 
-  Optional `image`: multipart file or public URL (jpg, png, webp, jpeg, heic, heif; max 20MB). Prompt is still required. When `image` is set, generation is image-to-image (subject stays recognizable; output size follows the reference, longest side ≤ 2048px). `aspectRatio` remains required by validation but is ignored for output dimensions. Use `multipart/form-data` when uploading a file.
+  Required: `prompt` (3–600 characters) and `aspectRatio` (`1x1`, `2x3`, `3x2`, `4x5`, `5x4`, `4x3`, `3x4`, `9x16`, `16x9`). Reference images are not accepted: sending `image` returns `400`. Image editing moved to `POST /api/service/image/edit`.
 - `POST /api/service/image/upscale` - Upscale images (2x or 4x)
 - `POST /api/service/image/filter` - Apply AI filters to images
+- `POST /api/service/image/edit` - Edit an existing image with a text instruction, preserving everything else
+
+  Required: `prompt` (3–600 characters) and exactly one of `image` or `source_key` (both → `400`). `image`: multipart file or public URL (JPG/PNG/WebP, HEIC converted; max 10MB and 6000×6000px). `source_key`: UUID of one of your own *ready* items — `coloring` (photo coloring page), `ai_image`, `ai_coloring` (first image), `name_coloring`, `upscale`, `ai_filter`, or `image_edit`; PBN is not supported. Errors: `403` no credits or queue full, `404` source not found/foreign/not ready/unsupported, `429` rate limited (20 per minute per user, body `{"error": "..."}`, `Retry-After` header gives the wait in seconds), `503` moderation service failure. Cost: 1 credit on paid plans (4 trial credits on free); failed edits are refunded, banned results are not. Result via `GET /api/service/item/{uuid}`: `type` `image_edit`, `images` array with one URL, `parameters` `{ "prompt": "..." }`.
 - `GET /api/service/items` - List the authenticated user's generated items (paginated)
 
-  Optional query params: `type` (`coloring`, `pbn`, `ai_coloring`, `ai_image`, `name_coloring`, `upscale`, `ai_filter`), `status` (`in_queue`, `processing`, `ready`, `failed`), `page` (default `1`), `per_page` (default `24`, max `100`). Returns a slim list (`key`, `type`, `status`, `created`, `title`, `thumbnail`); use `GET /api/service/item/{uuid}` for full detail. `type` values are public API names (not internal DB types). `thumbnail` is `null` until `status` is `ready`. Banned items are excluded from the list and cannot be filtered via `?status=banned`.
+  Optional query params: `type` (`coloring`, `pbn`, `ai_coloring`, `ai_image`, `name_coloring`, `upscale`, `ai_filter`, `image_edit`), `status` (`in_queue`, `processing`, `ready`, `failed`), `page` (default `1`), `per_page` (default `24`, max `100`). Returns a slim list (`key`, `type`, `status`, `created`, `title`, `thumbnail`); use `GET /api/service/item/{uuid}` for full detail. `type` values are public API names (not internal DB types). `thumbnail` is `null` until `status` is `ready`. Banned items are excluded from the list and cannot be filtered via `?status=banned`.
 
   Example (mobile PBN gallery): `GET /api/service/items?type=pbn&status=ready&page=1&per_page=24`
 
@@ -189,7 +192,7 @@ Once a PBN item status is `ready`, download its files directly:
 
 - `GET /api/service/item/{uuid}/pbn/colors/{type}` - Download the PBN color palette
 
-  Supported `type` values: `pdf`, `pdfshort`, `png`, `pngshort`, `csv`, `swatches`, `gpl`, `kpl`
+  Supported `type` values: `pdf`, `pdfshort`, `png`, `pngshort`, `csv`, `swatches`, `gpl`, `kpl`, `segments`, `bycolor`
 
   For `type=swatches`, the backend may return either:
   - a single `.swatches` file when the palette has 30 colors or fewer
